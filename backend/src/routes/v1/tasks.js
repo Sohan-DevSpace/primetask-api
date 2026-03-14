@@ -67,6 +67,11 @@ router.post('/', verifyAuthToken, validateRequest(createTaskSchema), createTask)
  *           type: integer
  *           default: 10
  *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search tasks by title or description
  *     responses:
  *       200:
  *         description: Paginated tasks list
