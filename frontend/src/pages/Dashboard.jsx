@@ -16,14 +16,26 @@ export default function Dashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
 
-  const fetchTasks = async () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Update debounced search term with delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchTasks = async (pageToFetch = page, status = statusFilter, searchStr = debouncedSearch) => {
     setIsLoading(true);
     try {
       const response = await api.get('/tasks', {
         params: {
-          page,
+          page: pageToFetch,
           limit: 10,
-          status: statusFilter || undefined
+          status: status || undefined,
+          search: searchStr || undefined
         }
       });
       
@@ -53,8 +65,15 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, [page, statusFilter]);
+    fetchTasks(1, statusFilter, debouncedSearch);
+    setPage(1);
+  }, [statusFilter, debouncedSearch]);
+
+  useEffect(() => {
+    if (page !== 1) {
+      fetchTasks(page, statusFilter, debouncedSearch);
+    }
+  }, [page]);
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -68,7 +87,8 @@ export default function Dashboard() {
       setNewTaskTitle('');
       setNewTaskDesc('');
       setIsCreating(false);
-      fetchTasks();
+      fetchTasks(1, statusFilter, debouncedSearch);
+      setPage(1);
     } catch (error) {
       console.error('Failed to create task', error);
     }
@@ -184,6 +204,8 @@ export default function Dashboard() {
               type="text" 
               placeholder="Search objectives..." 
               className="w-full bg-white/5 border border-white/5 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
@@ -246,7 +268,7 @@ export default function Dashboard() {
             <p className="text-slate-500 font-bold tracking-[.3em] uppercase text-[10px]">Synchronizing...</p>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="glass-panel p-32 rounded-[40px] text-center flex flex-col items-center border-dashed">
+          <div className="glass-panel p-32 rounded-[40px] text-center flex flex-col items-center border border-dashed border-white/10">
             <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-center text-slate-400 mb-8">
               <ListTodo className="w-10 h-10" />
             </div>
@@ -266,8 +288,8 @@ export default function Dashboard() {
                 key={task.id} 
                 task={task} 
                 isAdmin={isAdmin}
-                onTaskUpdated={fetchTasks}
-                onTaskDeleted={fetchTasks}
+                onTaskUpdated={() => fetchTasks(page, statusFilter, debouncedSearch)}
+                onTaskDeleted={() => fetchTasks(page, statusFilter, debouncedSearch)}
               />
             ))}
           </div>
@@ -300,4 +322,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
